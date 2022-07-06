@@ -5,6 +5,18 @@ Parameters:
   EnvironmentName:
     Type: String
 
+  AutoScaleMinSize:
+    Type: String
+    Default: 2
+
+  AutoScaleMaxSize:
+    Type: String
+    Default: 2
+
+  WebAppLaunchTemplateKeyName:
+    Type: String
+    Default: udacity-key-pair-demo
+
 Resources:
   # instace profile contains the IAM Role name(s) that we want to associate to our auto scaling EC2 Servers
   # never give too much permissions to your EC2 instances! if they get hacked, the permissions get hacked also!
@@ -54,6 +66,42 @@ Resources:
           FromPort: 0
           ToPort: 65535
           CidrIp: 0.0.0.0/0
+
+  WebAppLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${EnvironmentName}-launch-template
+      LaunchTemplateData:
+        ImageId: ami-0729e439b6769d6ab
+        KeyName: !Ref WebAppLaunchTemplateKeyName
+        InstanceType: t2.medium
+        SecurityGroupIds:
+        - !GetAtt WebServerSecurityGroup.GroupId
+        BlockDeviceMappings:
+        - DeviceName: "/dev/sdk"
+          Ebs:
+            VolumeSize: '10'
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            apt-get update -y
+            apt-get install apache2 -y
+            systemctl start apache2.service
+            cd /var/www/html
+            echo "Udacity Demo Web Server Up and Running!" > index.html
+
+  WebAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      MaxSize: !Ref AutoScaleMaxSize
+      MinSize: !Ref AutoScaleMinSize
+      VPCZoneIdentifier:
+        - Fn::ImportValue:
+            !Sub "${EnvironmentName}-PRIV-NETS"
+      LaunchTemplate:
+        LaunchTemplateId: !Ref 'WebAppLaunchTemplate'
+        Version: !GetAtt 'WebAppLaunchTemplate.LatestVersionNumber'
+
 
 # Outputs: 
   # This is also optional.
