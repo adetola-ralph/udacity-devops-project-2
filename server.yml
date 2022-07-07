@@ -7,26 +7,26 @@ Parameters:
 
   AutoScaleMinSize:
     Type: String
-    Default: 2
+    Default: 4
 
   AutoScaleMaxSize:
     Type: String
-    Default: 2
+    Default: 6
 
-  WebAppLaunchTemplateKeyName:
+  LaunchTemplateVolumeSize:
     Type: String
-    Default: udacity-key-pair-demo
+    Default: 10
+
+  LaunchTemplateImageId:
+    Type: String
+    Default: ami-0729e439b6769d6ab
+
+  LaunchTemplateInstanceType:
+    Type: String
+    Default: t2.medium
+
 
 Resources:
-  # instace profile contains the IAM Role name(s) that we want to associate to our auto scaling EC2 Servers
-  # never give too much permissions to your EC2 instances! if they get hacked, the permissions get hacked also!
-  # in this example, I create a Role called UdacityS3ReadOnlyC2 and just give it a policy of S3 Read-Only Access
-  # ProfileWithRolesForOurApp:
-  #   Type: AWS::IAM::InstanceProfile
-  #   Properties: 
-  #     Roles:
-  #       - UdacityS3ReadOnlyEC2
-
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -72,15 +72,14 @@ Resources:
     Properties:
       LaunchTemplateName: !Sub ${EnvironmentName}-launch-template
       LaunchTemplateData:
-        ImageId: ami-0729e439b6769d6ab
-        KeyName: !Ref WebAppLaunchTemplateKeyName
-        InstanceType: t2.medium
+        ImageId: !Ref LaunchTemplateImageId
+        InstanceType: !Ref LaunchTemplateInstanceType
         SecurityGroupIds:
         - !GetAtt WebServerSecurityGroup.GroupId
         BlockDeviceMappings:
         - DeviceName: "/dev/sdk"
           Ebs:
-            VolumeSize: '10'
+            VolumeSize: !Ref LaunchTemplateVolumeSize
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
